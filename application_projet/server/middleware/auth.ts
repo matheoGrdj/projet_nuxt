@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const url = req.url || "";
 
   // Liste des routes publiques qui ne nécessitent pas d'authentification
-  const publicRoutes = ["/api/login", "/api/register"];
+  const publicRoutes = ["/api/login", "/api/register", "/api/session"];
 
   if (
     url.startsWith("/api") &&

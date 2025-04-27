@@ -1,19 +1,35 @@
 <script setup>
 import { useRouter } from 'vue-router';
+import { logout } from '../services/auth.js';
+import { index } from '../services/httpClient.js';
 
 const router = useRouter();
-const { session, refresh, update, reset } = await useSession()
+const { session, refresh } = await useSession()
 const username = session.value.username
 
 const disconnect = async () => {
-    await reset()
-    await refresh()
-    await update({
-        token: null,
-        refreshToken: null
-    })
-    await router.push('/login')
+    try {
+        await logout()
+        await refresh()
+        router.push('/login')
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert('An error occurred during logout. Please try again.');
+    }
 }
+
+const forumList = async () => {
+    try {
+        const response = await index('forum')
+        console.log('Forum list:', response);
+    } catch (error) {
+        console.error('Error fetching forum list:', error);
+    }
+}
+
+onMounted(() => {
+    forumList()
+})
 
 </script>
 
@@ -24,14 +40,6 @@ const disconnect = async () => {
                 Bonjour {{ username }} !!!!
             </h1>
             <div class="flex flex-col space-y-4">
-                <nuxt-link to="/login"
-                    class="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Login
-                </nuxt-link>
-                <nuxt-link to="/register"
-                    class="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    Register
-                </nuxt-link>
                 <button @click="disconnect"
                     class="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                     Disconnect

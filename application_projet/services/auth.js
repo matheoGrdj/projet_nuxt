@@ -35,3 +35,13 @@ export async function register(username, password) {
         alert(response.message);
     }
 }
+
+export async function logout() {
+    const { session, refresh, update, reset } = await useSession()
+    await reset()
+    await refresh()
+    await update({
+        token: null,
+        refreshToken: null
+    })
+}
