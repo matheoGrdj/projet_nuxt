@@ -1,10 +1,9 @@
-export async function index() {
+export async function forums() {
     const { session, refresh, update, reset } = await useSession()
-    console.log('Session:', session)
     if (!session.value.token) {
         return { success: false, message: 'No token found' }
     }
-    return $fetch('/api/', {
+    return $fetch('/api/forums', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${session.value.token}`

@@ -1,4 +1,4 @@
-import db from "../api/db";
+import db from "./db";
 
 export default defineEventHandler(async (event) => {
   const forums = await db.any("SELECT * FROM forums");
