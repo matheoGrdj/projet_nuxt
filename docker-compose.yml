@@ -1,0 +1,32 @@
+services:
+  # BD PostgreSQL
+  projet_nuxt.db:
+    image: 'postgres:latest'
+    env_file: ./projet_nuxt.env
+    ports:
+      - '5432:5432'
+
+  #
+  # service administration des bases sql
+  #
+  adminer:
+    image: 'adminer:latest'
+    ports:
+      - '8111:8080'
+
+  
+  # cvpsenergy.frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: build/DockerFile.frontend
+  #   container_name: cvpsenergy-frontend
+  #   ports:
+  #     - "5173:5173"
+  #   command: npm run dev
+  #   volumes:
+  #     - ./cvpsenergy.front:/app
+  #     - /app/node_modules # Volume temporaire pour préserver les dépendances
+  #   depends_on:
+  #     - cvpsenergy.backend
+  #   environment:
+  #     - BACKEND_URL=http://localhost:8889/api
