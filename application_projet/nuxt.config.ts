@@ -7,5 +7,8 @@ export default defineNuxtConfig({
     routeRules: {
       "/api/**": { cors: true },
     },
+    experimental: {
+      websocket: true,
+    },
   },
 });
