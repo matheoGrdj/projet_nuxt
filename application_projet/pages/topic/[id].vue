@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSession } from '#imports'
 import { getTopic, getMessages, createMessage } from '../../services/httpClient'
@@ -8,6 +8,18 @@ const route = useRoute()
 const topicId = route.params.id
 const { session } = await useSession()
 
+const userId = ref(null)
+onMounted(async () => {
+  if (session.value?.token) {
+    const { default: jwt_decode } = await import('jwt-decode')
+    const decoded = jwt_decode(session.value.token)
+    console.log("decoded", decoded)
+    userId.value = decoded.id || decoded.user_id
+  }
+})
+console.log("userId", userId)
+const editingMessageId = ref(null)
+const editContent = ref('')
 const topic = ref(null)
 const messages = ref([])
 const currentPage = ref(1)
@@ -30,6 +42,7 @@ const fetchMessages = async () => {
   try {
     const response = await getMessages(topicId, currentPage.value, itemsPerPage)
     messages.value = response.messages
+    console.log("messages", messages.value)
     totalPages.value = response.pagination.pages
   } catch (error) {
     console.error('Error fetching messages:', error)
@@ -56,9 +69,31 @@ const changePage = (page) => {
   fetchMessages()
 }
 
+function startEdit(message) {
+  editingMessageId.value = message.id
+  editContent.value = message.content
+}
+
+function cancelEdit() {
+  editingMessageId.value = null
+  editContent.value = ''
+}
+
+async function saveEdit(messageId) {
+  try {
+    await editMessageApi(messageId, editContent.value)
+    editingMessageId.value = null
+    editContent.value = ''
+    await fetchMessages()
+  } catch (e) {
+    alert('Erreur lors de la modification')
+  }
+}
+
 onMounted(() => {
   fetchTopic()
   fetchMessages()
+  console.log("messages", messages.value)
 })
 </script>
 
@@ -77,11 +112,37 @@ onMounted(() => {
         </div>
       </div>
 
+      <div v-if="session?.token" class="bg-white p-6 rounded-lg shadow-lg mb-6">
+        <form @submit.prevent="postMessage" class="space-y-4">
+          <div>
+            <label for="message" class="block text-sm font-medium text-gray-700">
+              Reply to this topic
+            </label>
+            <textarea id="message" v-model="newMessage" rows="4" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm 
+                             focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Write your message here..."></textarea>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md 
+                           hover:bg-blue-700">
+              Post Reply
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Login prompt if not authenticated -->
+      <div v-else class="bg-white p-6 rounded-lg shadow-lg text-center mb-6">
+        <p class="text-gray-600">
+          Please <nuxt-link to="/login" class="text-blue-600 hover:underline">
+            sign in
+          </nuxt-link> to reply to this topic.
+        </p>
+      </div>
+
       <!-- Messages List -->
       <div class="space-y-4 mb-6">
-        <div v-for="message in messages" 
-             :key="message.id" 
-             class="bg-white p-6 rounded-lg shadow-lg">
+        <div v-for="message in messages" :key="message.id" class="bg-white p-6 rounded-lg shadow-lg">
           <div class="flex justify-between items-start">
             <div class="flex-1">
               <div class="flex items-center mb-2">
@@ -91,9 +152,20 @@ onMounted(() => {
                   {{ new Date(message.created_at).toLocaleString() }}
                 </span>
               </div>
-              <div class="prose prose-sm max-w-none text-gray-700">
+              <div v-if="editingMessageId !== message.id" class="prose prose-sm max-w-none text-gray-700">
                 {{ message.content }}
               </div>
+              <div v-else>
+                <textarea v-model="editContent" class="w-full border rounded p-2"></textarea>
+                <div class="mt-2 flex gap-2">
+                  <button @click="saveEdit(message.id)"
+                    class="bg-blue-600 text-white px-3 py-1 rounded">Enregistrer</button>
+                  <button @click="cancelEdit" class="bg-gray-300 px-3 py-1 rounded">Annuler</button>
+                </div>
+              </div>
+            </div>
+            <div v-if="userId === message.user_id && editingMessageId !== message.id">
+              <button @click="startEdit(message)" class="text-blue-600 hover:underline text-sm">Modifier</button>
             </div>
           </div>
         </div>
@@ -101,51 +173,14 @@ onMounted(() => {
 
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="flex justify-center space-x-2 mb-6">
-        <button v-for="page in totalPages"
-                :key="page"
-                @click="changePage(page)"
-                :class="[
-                  'px-3 py-1 rounded',
-                  currentPage === page 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                ]">
+        <button v-for="page in totalPages" :key="page" @click="changePage(page)" :class="[
+          'px-3 py-1 rounded',
+          currentPage === page
+            ? 'bg-blue-600 text-white'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        ]">
           {{ page }}
         </button>
-      </div>
-
-      <!-- New Message Form -->
-      <div v-if="session?.token" class="bg-white p-6 rounded-lg shadow-lg">
-        <form @submit.prevent="postMessage" class="space-y-4">
-          <div>
-            <label for="message" class="block text-sm font-medium text-gray-700">
-              Reply to this topic
-            </label>
-            <textarea id="message"
-                      v-model="newMessage"
-                      rows="4"
-                      required
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm 
-                             focus:border-blue-500 focus:ring-blue-500"
-                      placeholder="Write your message here..."></textarea>
-          </div>
-          <div class="flex justify-end">
-            <button type="submit"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-md 
-                           hover:bg-blue-700">
-              Post Reply
-            </button>
-          </div>
-        </form>
-      </div>
-      
-      <!-- Login prompt if not authenticated -->
-      <div v-else class="bg-white p-6 rounded-lg shadow-lg text-center">
-        <p class="text-gray-600">
-          Please <nuxt-link to="/login" class="text-blue-600 hover:underline">
-            sign in
-          </nuxt-link> to reply to this topic.
-        </p>
       </div>
     </div>
   </div>

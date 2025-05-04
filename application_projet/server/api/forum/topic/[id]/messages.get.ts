@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
       FROM messages m
       JOIN users u ON m.user_id = u.id
       WHERE m.topic_id = $1
-      ORDER BY m.created_at ASC
+      ORDER BY m.created_at DESC
       LIMIT $2 OFFSET $3
     `,
       [id, limit, offset]
