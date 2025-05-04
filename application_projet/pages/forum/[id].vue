@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getForum, getTopics, createTopic } from '../../services/httpClient'
+import { getForum, getTopics, createTopic as createTopicApi } from '../../services/httpClient'
 import { useSession } from '#imports'
 
 const route = useRoute()
@@ -43,7 +43,7 @@ const fetchTopics = async () => {
 // Create new topic
 const createTopic = async () => {
   try {
-    const response = await createTopic(forumId, newTopic.value.title, newTopic.value.content)
+    const response = await createTopicApi(forumId, newTopic.value.title, newTopic.value.content)
     if (response) {
       showNewTopicForm.value = false
       newTopic.value = { title: '', content: '' }
@@ -84,9 +84,8 @@ onMounted(() => {
             <h1 class="text-2xl font-bold text-gray-900">{{ forum?.name }}</h1>
             <p class="text-gray-600 mt-1">{{ forum?.description }}</p>
           </div>
-          <button v-if="session?.token"
-                  @click="showNewTopicForm = true"
-                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+          <button v-if="session?.token" @click="showNewTopicForm = true"
+            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
             New Topic
           </button>
         </div>
@@ -98,26 +97,20 @@ onMounted(() => {
         <form @submit.prevent="createTopic" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700">Title</label>
-            <input v-model="newTopic.title"
-                   type="text"
-                   required
-                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            <input v-model="newTopic.title" type="text" required
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Content</label>
-            <textarea v-model="newTopic.content"
-                      required
-                      rows="4"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+            <textarea v-model="newTopic.content" required rows="4"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
           </div>
           <div class="flex justify-end space-x-3">
-            <button type="button"
-                    @click="showNewTopicForm = false"
-                    class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
+            <button type="button" @click="showNewTopicForm = false"
+              class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
               Cancel
             </button>
-            <button type="submit"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
               Create Topic
             </button>
           </div>
@@ -127,17 +120,15 @@ onMounted(() => {
       <!-- Topics List -->
       <div class="bg-white rounded-lg shadow-lg">
         <div v-if="topics.length > 0" class="divide-y divide-gray-200">
-          <div v-for="topic in topics" 
-               :key="topic.id"
-               class="p-6 hover:bg-gray-50">
+          <div v-for="topic in topics" :key="topic.id" class="p-6 hover:bg-gray-50">
             <nuxt-link :to="`/topic/${topic.id}`" class="block">
               <div class="flex justify-between items-center">
                 <div>
                   <h3 class="text-lg font-medium text-blue-600">{{ topic.title }}</h3>
                   <p class="text-sm text-gray-500">
-                    by {{ topic.author }} | 
+                    by {{ topic.author }} |
                     {{ topic.message_count }} messages |
-                    Last reply by {{ topic.last_message_author }} 
+                    Last reply by {{ topic.last_message_author }}
                     at {{ new Date(topic.last_message_at).toLocaleString() }}
                   </p>
                 </div>
@@ -160,15 +151,12 @@ onMounted(() => {
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
           <div class="flex justify-center space-x-2">
-            <button v-for="page in totalPages"
-                    :key="page"
-                    @click="currentPage = page"
-                    :class="[
-                      'px-3 py-1 rounded',
-                      currentPage === page 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    ]">
+            <button v-for="page in totalPages" :key="page" @click="currentPage = page" :class="[
+              'px-3 py-1 rounded',
+              currentPage === page
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            ]">
               {{ page }}
             </button>
           </div>

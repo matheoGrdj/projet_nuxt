@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import db from "../../db";
+import db from "../../../db";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
@@ -14,15 +14,14 @@ export function getUserIdFromToken(token: string): string | null {
 }
 
 export default defineEventHandler(async (event) => {
-  const forumId = event.context.params?.id;
-  if (!forumId) {
+  const topicId = event.context.params?.id;
+  if (!topicId) {
     throw createError({
       statusCode: 400,
-      message: "Forum ID is required",
+      message: "Topic ID is required",
     });
   }
-  const { title, content } = await readBody(event);
-
+  const { content } = await readBody(event);
   const authHeader = event.headers.get("Authorization");
   if (!authHeader) {
     throw createError({
@@ -40,45 +39,39 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    let createdTopicId;
+    // Add the message to the database
+    const messageId = await db.one(
+      `
+      INSERT INTO messages (topic_id, user_id, content)
+      VALUES ($1, $2, $3)
+      RETURNING id
+    `,
+      [topicId, userId, content]
+    );
 
-    await db.tx(async (t) => {
-      // Create topic
-      const topicResult = await t.one(
-        `
-        INSERT INTO topics (forum_id, user_id, title, last_message_user_id)
-        VALUES ($1, $2, $3, $2)
-        RETURNING id
-      `,
-        [forumId, userId, title]
-      );
-
-      createdTopicId = topicResult.id;
-
-      // Create initial message
-      const messageId = await t.one(
-        `
-        INSERT INTO messages (topic_id, user_id, content)
-        VALUES ($1, $2, $3)
-        RETURNING id
-      `,
-        [createdTopicId, userId, content]
-      );
-    });
+    // Update the topic's last message info
+    await db.none(
+      `
+      UPDATE topics
+      SET last_message_user_id = $1, last_message_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `,
+      [userId, topicId]
+    );
 
     return {
       success: true,
-      topic: {
-        id: createdTopicId,
-        title,
+      message: {
+        id: messageId,
+        content,
         user_id: userId,
       },
     };
   } catch (error) {
-    console.error("Error creating topic:", error);
+    console.error("Error creating message:", error);
     throw createError({
       statusCode: 500,
-      message: "Failed to create topic",
+      message: "Failed to create message",
     });
   }
 });
